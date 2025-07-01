@@ -1,5 +1,5 @@
 ---
-title: "scott_foster_game_analysis"
+title: "Scott Foster Game Analysis"
 output:
   html_document:
     df_print: paged
