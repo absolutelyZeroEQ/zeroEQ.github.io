@@ -1,0 +1,163 @@
+---
+title: "scott_foster_game_analysis"
+output:
+  html_document:
+    df_print: paged
+date: "2025-06-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+First, we load in our libraries & data and take a look at the structure:
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(knitr)
+data = read.csv("foster_game_data.csv")
+head(data)
+```
+
+The data has every playoff game from the 2007-2008 season up to and including the 2024-2025 season. Each row represents a game + official combination. There are three officials assigned to each game, so every game has three rows. Some noteworthy columns:
+
+- SCOREMARGIN: The final score margin for the home team. +7 means the home team won by 7. -7 means the home team lost by 7.
+- team1_wins_prior: number of wins team1 has prior to the game being played
+- team1_wins: number of wins team1 has after the game is played
+- uneven: indicates if the game is eligible for an "extension", i.e., the series is not tied.
+- extended: indicates if the game resulted in an "extension", i.e., the team that was trailing in the series won.
+
+We want to start by slightly filtering the data. We're going to be looking at the winning percentage of trailing teams while Foster is officiating, compared to other referees. Since every game has 3 refs, there's some overlap in the data. If we assume Foster *does* tilt games in favor of the trailing teams, then we would expect that a truly neutral ref who shares a lot of games with Foster will have slightly biased numbers. To account for this, we make sure that for non-Foster refs, we only look at the games where Foster did not share the floor with them.
+
+That way, if Foster truly *does* tilt games, this will make it stick out slightly more.
+
+
+```{r}
+#find games where foster officiates
+foster_games = unique(data[data$official == "Scott Foster",]$GAME_ID)
+non_foster_games = setdiff(unique(data$GAME_ID), foster_games)
+
+#if scott foster is not in the game, keep it. if scott foster is in the game, keep only his row
+data_filt = data %>% filter((GAME_ID %in% non_foster_games) | (GAME_ID %in% foster_games & official == "Scott Foster"))
+```
+
+We want to summarize the data. For each referee, we'll grab
+
+- Total games officiated
+- Number of uneven games officiated
+- Number of extensions
+- Number of games that were officiated in the first round
+
+```{r}
+ref_data_overall = data_filt %>%
+  group_by(official) %>%
+  summarize(total_games = n(),
+            uneven_games = sum(uneven),
+            extensions = sum(extended),
+            trailing_team_win_pct = extensions / uneven_games,
+            r1_games = sum(round == 1),
+            r1_pct = r1_games/total_games)
+```
+
+Now we'll write a function to spit out the data for us in a more digestable way. We ultimately want
+
+- Non-Foster record & winning % of trailing teams
+- Foster record & winning % of trailing teams
+- Foster's rank among referees with a minimum number of games officiated
+
+```{r}
+data_summary = function(ref_data, min_games){
+  foster_data = filter(ref_data, official == "Scott Foster")
+  
+  #Non-foster averages (higher number -- more favorable to trailing team)
+  trailing_wins = sum(ref_data$extensions, na.rm = TRUE)
+  trailing_losses = sum(ref_data$uneven_games, na.rm = TRUE) - trailing_wins
+  non_foster_trailing_team_win_pct =  trailing_wins/(trailing_wins + trailing_losses) 
+  
+  #foster averages
+  foster_wins = foster_data$extensions
+  foster_losses = foster_data$uneven_games - foster_wins
+  
+  foster_trailing_team_win_pct = foster_data$trailing_team_win_pct
+  
+  #subset the data with a minimum game filter to get foster's rank
+  sub_data = filter(ref_data, uneven_games > min_games)
+  n_eligible = nrow(sub_data)
+  foster_rank = sum(foster_trailing_team_win_pct < sub_data$trailing_team_win_pct)
+  
+  #create table rows
+  row1 = c(trailing_wins,trailing_losses,non_foster_trailing_team_win_pct,n_eligible)
+  row2 = c(foster_wins, foster_losses, foster_trailing_team_win_pct, foster_rank)
+  data_table = as_tibble(rbind(row1, row2))
+  
+  #rename columns
+  colnames(data_table) = c("Trailing Team Wins", "Trailing Team Losses", "Trailing Team Winning %", "Rank")
+  
+  #add column
+  data_table$Type = c("Non-Foster Games", "Foster Games")
+  
+  #rearrange columns
+  data_table = data_table[, c(5, 1, 2, 3, 4)]
+  
+  return(data_table)
+}
+```
+
+```{r}
+data_summary(ref_data_overall, 20)
+```
+
+We can see here that the trailing team typically has a win rate of 44%. When Foster is officiating, that number is about 47%. However, since Foster is an experienced ref, the NBA puts him in more important games, which likely means fewer round 1 games. Fewer round 1 games means that teams are more likely to be evenly matched. More evenly matched means that trailing teams should have higher winning percentages in later rounds.
+
+First let's check if this hypothesis holds up. We'll grab the 10 most experienced referees in this time span and the 25 least experienced, and look at what percentage of games they officiate are in the first round:
+
+```{r}
+top_10_refs = top_n(ref_data_overall, 10, total_games)
+bottom_25_refs = top_n(ref_data_overall, -25, total_games)
+
+top_10_refs_r1_pct = sum(top_10_refs$r1_games) / sum(top_10_refs$total_games)
+bottom_25_refs_r1_pct = sum(bottom_25_refs$r1_games) / sum(bottom_25_refs$total_games)
+
+top_10_refs_r1_pct
+bottom_25_refs_r1_pct
+```
+
+The first part of the claim is true: 80+% of the games officiated by the 25 least experienced refs were in round 1. Less than half of the games officiated by the 10 most experienced refs were in round 1.  Now let's subset the data and return similar tables as before:
+
+
+```{r}
+ref_data_r1_only = data_filt %>% filter(round == 1) %>%
+  group_by(official) %>%
+  summarize(total_games = n(),
+            uneven_games = sum(uneven),
+            extensions = sum(extended),
+            trailing_team_win_pct = extensions / uneven_games,
+            r1_games = sum(round == 1),
+            r1_pct = r1_games/total_games)
+
+data_summary(ref_data_r1_only, 10)
+```
+
+We see the winning percentage of trailing teams drop in the first round, as expected. 
+
+```{r}
+ref_data_no_r1 = data_filt %>% filter(round > 1) %>%
+  group_by(official) %>%
+  summarize(total_games = n(),
+            uneven_games = sum(uneven),
+            extensions = sum(extended),
+            trailing_team_win_pct = extensions / uneven_games,
+            r1_games = sum(round == 1),
+            r1_pct = r1_games/total_games)
+
+data_summary(ref_data_no_r1, 10)
+```
+
+And the winning percentage in later rounds is higher, as expected. Here we note that the winning percentage of trailing teams is higher when Foster is officiating. However, let's try to give this some scope and context.
+
+Foster is ranked 10th out of 33 qualifying refs in terms of trailing team winning percentage. That is, trailing teams have a higher winning percentage with 9 other refs than they do with Scott Foster.
+
+Also, look at the sample sizes here: trailing teams are 45-43 with Foster. If we take 48% to be the "true" winning percentage we would expect, then after 88 games, the expected record would be 42-46. In other words, trailing teams only have 3 more wins than expected after nearly 100 games officiated by Foster. If he's truly the "Extender", then he's not very good at extending.
+
+

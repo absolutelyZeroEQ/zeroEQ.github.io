@@ -1,0 +1,218 @@
+---
+title: "scott_foster_foul_analysis"
+output:
+  html_document:
+    df_print: paged
+date: "2025-06-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
+First, we load in our libraries & data and take a look at the structure:
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(knitr)
+data = read.csv("foster_fouling_data.csv")
+head(data)
+```
+
+The data has every playoff game from the 2014-2015 season up to and including the 2024-2025 season. Each row represents a game + official combination. There are three officials assigned to each game, so every game has three rows. Some noteworthy columns:
+
+- home_calls: number of calls this official made against (i.e., negatively affecting) the home team
+- team1_wins_prior: number of wins team1 has prior to the game being played
+- team1_wins: number of wins team1 has after the game is played
+- uneven: indicates if the game is eligible for an "extension", i.e., the series is not tied.
+- extended: indicates if the game resulted in an "extension", i.e., the team that was trailing in the series won.
+- trailing_calls: the number of calls this official made against (i.e., negatively affecting) the team trailing in the series. if the series was tied going into the game, this should be 0
+
+
+Next we'll summarize the data for each individual referee. We want:
+
+- total calls
+- total calls in uneven games
+- calls against the trailing team
+- calls against the leading team
+
+```{r}
+ref_data_overall = data %>%
+  group_by(official) %>%
+  summarize(total_calls = sum(home_calls + away_calls),
+            total_uneven_calls = sum(trailing_calls) + sum(leading_calls),
+            calls_against_trail = sum(trailing_calls),
+            calls_against_lead = sum(leading_calls),
+            calls_against_lead_pct = calls_against_lead / total_uneven_calls)
+```
+
+Now we're going to write a function that will spit out the following information for us (plus some other stuff):
+
+- Percentage of (non-Foster) calls that go *against* the leading team (If this percentage is >50%, that indicates that the trailing team is getting an advantage.)
+- Foster's percentage of calls against the leading team
+- Foster's rank among referees with a minimum number of calls made
+
+
+```{r}
+data_summary = function(ref_data, min_calls){
+  foster_data = filter(ref_data, official == "S.Foster")
+  
+  #total average
+  total_non_foster_calls = as.integer(sum(ref_data$total_uneven_calls))
+  total_non_foster_trailing_calls = as.integer(sum(ref_data$calls_against_trail))
+  total_non_foster_leading_calls = as.integer(sum(ref_data$calls_against_lead))
+  
+  avg_calls_against_lead_pct = total_non_foster_leading_calls / total_non_foster_calls
+  
+  #foster average
+  total_foster_calls = foster_data$total_uneven_calls
+  total_foster_trailing_calls = foster_data$calls_against_trail
+  total_foster_leading_calls = foster_data$calls_against_lead
+  
+  foster_calls_against_lead_pct = foster_data$calls_against_lead_pct
+  
+  #subset the data with a minimum call filter to get Foster's rank
+  sub_data = filter(ref_data, total_uneven_calls > min_calls)
+  n_eligible = nrow(sub_data)
+  foster_rank = sum(foster_calls_against_lead_pct < sub_data$calls_against_lead_pct)
+  
+  #create table rows
+  row1 = c(total_non_foster_leading_calls,
+           total_non_foster_trailing_calls,
+           avg_calls_against_lead_pct,
+           n_eligible)
+  row2 = c(total_foster_leading_calls,
+           total_foster_trailing_calls,
+           foster_calls_against_lead_pct,
+           foster_rank)
+  data_table = as_tibble(rbind(row1, row2))
+  
+  #rename columns
+  colnames(data_table) = c("Calls Against Leading Team",
+                           "Calls Against Trailing Team",
+                           "Percent of Calls Against Leading Team",
+                           "Rank")
+  
+  #add column
+  data_table$Type = c("Non-Foster Calls", "Foster Calls")
+  
+  #rearrange columns
+  data_table = data_table[, c(5, 1, 2, 3, 4)]
+  return(data_table)
+}
+```
+
+```{r}
+data_summary(ref_data_overall, 100)
+```
+
+Now that we have a function to return this, we can modify the input to get the same table for different data subsets. We'll do the same thing for ONLY round 1 games and for ONLY rounds later than round 1:
+
+
+```{r}
+ref_data_only_r1 = data %>% filter(round == 1) %>%
+  group_by(official) %>%
+  summarize(total_calls = sum(home_calls + away_calls),
+            total_uneven_calls = sum(trailing_calls) + sum(leading_calls),
+            calls_against_trail = sum(trailing_calls),
+            calls_against_lead = sum(leading_calls),
+            calls_against_lead_pct = calls_against_lead / total_uneven_calls)
+  
+ref_data_no_r1 = data %>% filter(round > 1) %>%
+  group_by(official) %>%
+  summarize(total_calls = sum(home_calls + away_calls),
+            total_uneven_calls = sum(trailing_calls) + sum(leading_calls),
+            calls_against_trail = sum(trailing_calls),
+            calls_against_lead = sum(leading_calls),
+            calls_against_lead_pct = calls_against_lead / total_uneven_calls)
+  
+```
+
+```{r}
+data_summary(ref_data_only_r1, 100)
+```
+
+Foster's call % against the leading team being <50% indicates that there is a slight advantage to the leading team, not the trailing team.
+
+```{r}
+data_summary(ref_data_no_r1, 100)
+```
+
+Excluding round 1, Foster is at 51.5%, a bit higher than the non-Foster average. Let's give this some context and scope. 
+
+First, Foster is only ranked 9th out of 29, meaning there are 8 refs who have a higher percentage of calls against the leading team (and thus, a bigger advantage to trailing teams).
+
+Second, Foster officiated 56 games in this span. The averages here come out to 8 calls per game against the trailing team and 8.5 calls per game against the leading team. For someone with the nickname "The Extender", you would think that he would give a bigger advantage than 1 extra call every 2 games, on average.
+
+
+But suppose that the NBA truly does have their refs try to tilt certain games to extend series. Since there are three officials in each game, Scott Foster may not *have* to be the one calling the fouls. It could be the case that the other officials in Foster's games are making uneven calls as well. Hence, we may want to look at the TOTAL foul calls by all three officials in games including vs excluding Foster.
+
+First, let's identify games that Foster is in by adding a column called "foster_game" that takes on the value of TRUE when Foster is in that game, and FALSE otherwise.
+
+```{r}
+#find games where foster officiates
+foster_games = unique(data[data$official == "S.Foster",]$GAME_ID)
+non_foster_games = setdiff(unique(data$GAME_ID), foster_games)
+
+#add column to indicate when foster officiates
+data_combined = data %>% mutate(foster_game = GAME_ID %in% foster_games)
+
+#add up the calls made by EVERY official in each game
+data_combined = data_combined %>%
+  group_by(GAME_ID) %>%
+  mutate(total_home_calls = sum(home_calls),
+         total_away_calls = sum(away_calls),
+         total_total_calls = total_home_calls + total_away_calls,
+         total_trailing_calls = sum(trailing_calls),
+         total_leading_calls = sum(leading_calls),
+         total_total_uneven_calls = total_trailing_calls + total_leading_calls)
+
+#now remove duplicate rows
+data_combined = data_combined %>% group_by(GAME_ID) %>% filter(row_number() == 1)
+```
+
+Then we write another small function to return a table for us.
+
+```{r}
+data_summary_totals = function(ref_data){
+  summarized_data = ref_data %>%
+    group_by(foster_game) %>%
+    summarize(total_uneven_calls = sum(total_total_uneven_calls),
+              calls_against_lead = sum(total_leading_calls),
+              calls_against_trail = sum(total_trailing_calls),
+              calls_against_lead_pct = calls_against_lead / total_uneven_calls)
+  
+  summarized_data_table = select(summarized_data, -total_uneven_calls)
+  summarized_data_table = as_tibble(summarized_data_table)
+  colnames(summarized_data_table) = c("Type",
+                                      "Calls Against Leading Team",
+                                      "Calls Against Trailing Team",
+                                      "Percent of Calls Against Leading Team")
+  
+  summarized_data_table$Type = c("Non-Foster Games", "Foster Games")
+  
+  return(summarized_data_table)
+}
+```
+
+
+```{r}
+data_summary_totals(data_combined)
+```
+
+Overall, the percentage of calls against the leading team in games with Foster is almost identical to the games without Foster.
+
+```{r}
+data_combined_r1_only = data_combined %>% filter(round == 1) 
+data_summary_totals(data_combined_r1_only)
+```
+
+If we limit ourselves to the first round, Foster-officiated games have a very slightly higher percentage of calls against the leading team, but it's almost negligible.
+
+```{r}
+data_combined_no_r1 = data_combined %>% filter(round > 1)
+data_summary_totals(data_combined_no_r1)
+```
+
+Same conclusion if we limit ourselves to rounds beyond the first.
