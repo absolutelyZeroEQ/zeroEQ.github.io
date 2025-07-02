@@ -1643,19 +1643,24 @@ including the 2024-2025 season. Each row represents a game + official
 combination. There are three officials assigned to each game, so every
 game has three rows. Some noteworthy columns:</p>
 <ul>
-<li>home_calls: number of calls this official made against (i.e.,
-negatively affecting) the home team</li>
-<li>team1_wins_prior: number of wins team1 has prior to the game being
-played</li>
-<li>team1_wins: number of wins team1 has after the game is played</li>
-<li>uneven: indicates if the game is eligible for an “extension”, i.e.,
-the series is not tied.</li>
-<li>extended: indicates if the game resulted in an “extension”, i.e.,
-the team that was trailing in the series won.</li>
-<li>trailing_calls: the number of calls this official made against
-(i.e., negatively affecting) the team trailing in the series. if the
-series was tied going into the game, this should be 0</li>
+<li><strong>home_calls</strong>: number of calls this official made
+against (i.e., negatively affecting) the home team</li>
+<li><strong>team1_wins_prior</strong>: number of wins team1 has prior to
+the game being played</li>
+<li><strong>team1_wins</strong>: number of wins team1 has after the game
+is played</li>
+<li><strong>uneven</strong>: indicates if the game is eligible for an
+“extension”, i.e., the series is not tied.</li>
+<li><strong>extended</strong>: indicates if the game resulted in an
+“extension”, i.e., the team that was trailing in the series won.</li>
+<li><strong>trailing_calls</strong>: the number of calls this official
+made against (i.e., negatively affecting) the team trailing in the
+series. if the series was tied going into the game, this should be
+0</li>
 </ul>
+<p>An important note: this data set excludes transition take fouls,
+violations (e.g. kicked ball), and techs. It does <strong>not</strong>
+exclude intentional fouls. We’ll address this later.</p>
 <p>Next we’ll summarize the data for each individual referee. We
 want:</p>
 <ul>
@@ -1701,7 +1706,8 @@ made</li>
   #subset the data with a minimum call filter to get Foster&#39;s rank
   sub_data = filter(ref_data, total_uneven_calls &gt; min_calls)
   n_eligible = nrow(sub_data)
-  foster_rank = sum(foster_calls_against_lead_pct &lt; sub_data$calls_against_lead_pct)
+  #+1 because if foster has the highest pct, he&#39;ll be rank 0 with this method
+  foster_rank = sum(foster_calls_against_lead_pct &lt; sub_data$calls_against_lead_pct) + 1
   
   #create table rows
   row1 = c(total_non_foster_leading_calls,
@@ -1730,7 +1736,7 @@ made</li>
 <pre class="r"><code>data_summary(ref_data_overall, 100)</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Calls Against Leading Team"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Calls Against Trailing Team"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Percent of Calls Against Leading Team"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Calls","2":"11998","3":"12076","4":"0.49838","5":"45"},{"1":"Foster Calls","2":"795","3":"795","4":"0.50000","5":"21"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Calls Against Leading Team"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Calls Against Trailing Team"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Percent of Calls Against Leading Team"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Calls","2":"11998","3":"12076","4":"0.49838","5":"45"},{"1":"Foster Calls","2":"795","3":"795","4":"0.50000","5":"22"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <p>Now that we have a function to return this, we can modify the input
@@ -1751,38 +1757,35 @@ ref_data_no_r1 = data %&gt;% filter(round &gt; 1) %&gt;%
             calls_against_trail = sum(trailing_calls),
             calls_against_lead = sum(leading_calls),
             calls_against_lead_pct = calls_against_lead / total_uneven_calls)</code></pre>
-<pre class="r"><code>data_summary(ref_data_only_r1, 100)</code></pre>
+<pre class="r"><code>data_summary(ref_data_only_r1, 50)</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Calls Against Leading Team"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Calls Against Trailing Team"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Percent of Calls Against Leading Team"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Calls","2":"6284","3":"6361","4":"0.4969553","5":"43"},{"1":"Foster Calls","2":"320","3":"348","4":"0.4790419","5":"31"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Calls Against Leading Team"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Calls Against Trailing Team"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Percent of Calls Against Leading Team"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Calls","2":"6284","3":"6361","4":"0.4969553","5":"47"},{"1":"Foster Calls","2":"320","3":"348","4":"0.4790419","5":"34"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <p>Foster’s call % against the leading team being &lt;50% indicates that
 there is a slight advantage to the leading team, not the trailing
 team.</p>
-<pre class="r"><code>data_summary(ref_data_no_r1, 100)</code></pre>
+<pre class="r"><code>data_summary(ref_data_no_r1, 50)</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Calls Against Leading Team"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Calls Against Trailing Team"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Percent of Calls Against Leading Team"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Calls","2":"5714","3":"5715","4":"0.4999563","5":"29"},{"1":"Foster Calls","2":"475","3":"447","4":"0.5151844","5":"9"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Calls Against Leading Team"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Calls Against Trailing Team"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Percent of Calls Against Leading Team"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Calls","2":"5714","3":"5715","4":"0.4999563","5":"36"},{"1":"Foster Calls","2":"475","3":"447","4":"0.5151844","5":"11"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <p>Excluding round 1, Foster is at 51.5%, a bit higher than the
-non-Foster average. Let’s give this some context and scope.</p>
-<p>First, Foster is only ranked 9th out of 29, meaning there are 8 refs
-who have a higher percentage of calls against the leading team (and
-thus, a bigger advantage to trailing teams).</p>
-<p>Second, Foster officiated 56 games in this span. The averages here
-come out to 8 calls per game against the trailing team and 8.5 calls per
-game against the leading team. For someone with the nickname “The
-Extender”, you would think that he would give a bigger advantage than 1
-extra call every 2 games, on average.</p>
-<p>But suppose that the NBA truly does have their refs try to tilt
-certain games to extend series. Since there are three officials in each
-game, Scott Foster may not <em>have</em> to be the one calling the
-fouls. It could be the case that the other officials in Foster’s games
-are making uneven calls as well. Hence, we may want to look at the TOTAL
-foul calls by all three officials in games including vs excluding
-Foster.</p>
+non-Foster average.</p>
+<p>Foster is ranked 11th out of 36, meaning there are 10 refs who have a
+higher percentage of calls against the leading team (and thus, a bigger
+advantage to trailing teams).</p>
+<p>Foster officiated 56 games in this span. The averages here come out
+to 8 calls per game against the trailing team and 8.5 calls per game
+against the leading team.</p>
+<p>Suppose that the NBA truly does have their refs try to tilt certain
+games to extend series. Since there are three officials in each game,
+Scott Foster may not <em>have</em> to be the one calling the fouls. It
+could be the case that the other officials in Foster’s games are making
+uneven calls as well. Hence, we may want to look at the TOTAL foul calls
+by all three officials in games including vs excluding Foster.</p>
 <p>First, let’s identify games that Foster is in by adding a column
 called “foster_game” that takes on the value of TRUE when Foster is in
 that game, and FALSE otherwise.</p>
@@ -1851,6 +1854,213 @@ data_summary_totals(data_combined_no_r1)</code></pre>
   </script>
 </div>
 <p>Same conclusion if we limit ourselves to rounds beyond the first.</p>
+<p>But maybe Foster only shows his bias in high leverage moments. Maybe
+him and the NBA are smart enough to avoid being detected in the analysis
+above by employing the following strategy:</p>
+<ol style="list-style-type: decimal">
+<li>Call the game like normal for most of the game, showing no obvious
+bias</li>
+<li>If the game is close in the last few minutes, try to tilt the game
+towards the trailing team.</li>
+</ol>
+<p>One problem with trying to do this with our dataset is that there are
+a lot of ways to chop up the data and a lot of different “high leverage”
+definitions.</p>
+<p>The other (more important, imo) problem is that we don’t know which
+fouls are intentional fouls. In many late-game scenarios, one team may
+start intentionally fouling to stop the clock. Over the long run, I
+would imagine that this would average out across refs. However, if we
+focus on non-round 1 playoff games and only look at close games late in
+the 4th, we’re probably cutting our sample size by an order of
+magnitude, where a few intentional fouls could really swing things.</p>
+<p>Fortunately, we have the last 2 minutes report. This solves quite a
+few things for us:</p>
+<ol style="list-style-type: decimal">
+<li>We have a consistent criteria for high leverage (games that are
+within 3 points at any point in the last 2 minutes) that was decided for
+us (so we can’t just keep slightly changing our definition of “high
+leverage” until we get a desirable result)</li>
+<li>We can filter out take fouls, since they are usually mentioned in
+the description of the foul here.</li>
+<li>We get more than just foul calls, like out of bounds calls.</li>
+<li>We also get <em>non-calls</em>. This is important for us because it
+increases our sample size and gives us a fuller picture.</li>
+</ol>
+<p>The dataset tells us which refs were involved in each game, but it
+does <em>not</em> tell us which referee made the call. We could probably
+merge with our other dataset to determine who made which calls, but we
+obviously can’t tell which ref is at fault for <em>non</em> calls.</p>
+<p>First, let’s load in the data.</p>
+<p>L2M Analysis</p>
+<pre class="r"><code>library(data.table)
+#need to use fread from data.table here, otherwise things get messed up
+l2m = fread(&quot;L2M_data2.csv&quot;)
+head(l2m)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["period"],"name":[1],"type":["chr"],"align":["left"]},{"label":["time"],"name":[2],"type":["chr"],"align":["left"]},{"label":["call_type"],"name":[3],"type":["chr"],"align":["left"]},{"label":["committing"],"name":[4],"type":["chr"],"align":["left"]},{"label":["disadvantaged"],"name":[5],"type":["chr"],"align":["left"]},{"label":["decision"],"name":[6],"type":["chr"],"align":["left"]},{"label":["comments"],"name":[7],"type":["chr"],"align":["left"]},{"label":["game_details"],"name":[8],"type":["chr"],"align":["left"]},{"label":["page"],"name":[9],"type":["int"],"align":["right"]},{"label":["file"],"name":[10],"type":["chr"],"align":["left"]},{"label":["game_date"],"name":[11],"type":["chr"],"align":["left"]},{"label":["away_team"],"name":[12],"type":["chr"],"align":["left"]},{"label":["home_team"],"name":[13],"type":["chr"],"align":["left"]},{"label":["date"],"name":[14],"type":["IDate"],"align":["right"]},{"label":["call"],"name":[15],"type":["chr"],"align":["left"]},{"label":["type"],"name":[16],"type":["chr"],"align":["left"]},{"label":["home"],"name":[17],"type":["chr"],"align":["left"]},{"label":["away"],"name":[18],"type":["chr"],"align":["left"]},{"label":["gid"],"name":[19],"type":["int"],"align":["right"]},{"label":["gcode"],"name":[20],"type":["chr"],"align":["left"]},{"label":["home_score"],"name":[21],"type":["int"],"align":["right"]},{"label":["away_score"],"name":[22],"type":["int"],"align":["right"]},{"label":["national_tv"],"name":[23],"type":["chr"],"align":["left"]},{"label":["networks"],"name":[24],"type":["chr"],"align":["left"]},{"label":["game_id"],"name":[25],"type":["int"],"align":["right"]},{"label":["PCTime"],"name":[26],"type":["chr"],"align":["left"]},{"label":["ImposibleIndicator"],"name":[27],"type":["int"],"align":["right"]},{"label":["Difficulty"],"name":[28],"type":["chr"],"align":["left"]},{"label":["VideolLink"],"name":[29],"type":["int"],"align":["right"]},{"label":["Qualifier"],"name":[30],"type":["lgl"],"align":["right"]},{"label":["posID"],"name":[31],"type":["int"],"align":["right"]},{"label":["posStart"],"name":[32],"type":["chr"],"align":["left"]},{"label":["posEnd"],"name":[33],"type":["chr"],"align":["left"]},{"label":["posTeamId"],"name":[34],"type":["int"],"align":["right"]},{"label":["teamIdInFavor"],"name":[35],"type":["lgl"],"align":["right"]},{"label":["errorInFavor"],"name":[36],"type":["lgl"],"align":["right"]},{"label":["imgChart"],"name":[37],"type":["dbl"],"align":["right"]},{"label":["GameId"],"name":[38],"type":["int"],"align":["right"]},{"label":["GameDate"],"name":[39],"type":["dttm"],"align":["right"]},{"label":["HomeTeamId"],"name":[40],"type":["int"],"align":["right"]},{"label":["AwayTeamId"],"name":[41],"type":["int"],"align":["right"]},{"label":["L2M_Comments"],"name":[42],"type":["chr"],"align":["left"]},{"label":["season"],"name":[43],"type":["int"],"align":["right"]},{"label":["playoff"],"name":[44],"type":["lgl"],"align":["right"]},{"label":["GAME_ID"],"name":[45],"type":["int"],"align":["right"]},{"label":["OFFICIAL_1"],"name":[46],"type":["chr"],"align":["left"]},{"label":["OFFICIAL_2"],"name":[47],"type":["chr"],"align":["left"]},{"label":["OFFICIAL_3"],"name":[48],"type":["chr"],"align":["left"]},{"label":["OFFICIAL_ID_1"],"name":[49],"type":["int"],"align":["right"]},{"label":["OFFICIAL_ID_2"],"name":[50],"type":["int"],"align":["right"]},{"label":["OFFICIAL_ID_3"],"name":[51],"type":["int"],"align":["right"]},{"label":["OFFICIAL_4"],"name":[52],"type":["chr"],"align":["left"]},{"label":["OFFICIAL_ID_4"],"name":[53],"type":["int"],"align":["right"]},{"label":["ATTENDANCE"],"name":[54],"type":["int"],"align":["right"]},{"label":["committing_min"],"name":[55],"type":["dbl"],"align":["right"]},{"label":["committing_team"],"name":[56],"type":["chr"],"align":["left"]},{"label":["committing_side"],"name":[57],"type":["chr"],"align":["left"]},{"label":["disadvantaged_min"],"name":[58],"type":["dbl"],"align":["right"]},{"label":["disadvantaged_team"],"name":[59],"type":["chr"],"align":["left"]},{"label":["disadvantaged_side"],"name":[60],"type":["chr"],"align":["left"]},{"label":["type2"],"name":[61],"type":["chr"],"align":["left"]},{"label":["time_min"],"name":[62],"type":["int"],"align":["right"]},{"label":["time_sec"],"name":[63],"type":["dbl"],"align":["right"]},{"label":["time2"],"name":[64],"type":["dbl"],"align":["right"]}],"data":[{"1":"Q4","2":"01:52.0","3":"Foul: Shooting","4":"Josh Smith","5":"Kevin Love","6":"CNC","7":"Smith (HOU) does not make contact with Love (CLE) as he attempts the layup.","8":"Cavaliers @ Rockets (Mar 01, 2015)","9":"1","10":"L2M-CLE-HOU-3-1-15.pdf","11":"Mar 01, 2015","12":"Cavaliers","13":"Rockets","14":"2015-03-01","15":"FOUL","16":"SHOOTING","17":"HOU","18":"CLE","19":"21400883","20":"20150301/CLEHOU","21":"105","22":"103","23":"NBATV","24":"NBATV","25":"NA","26":"NA","27":"NA","28":"NA","29":"NA","30":"NA","31":"NA","32":"NA","33":"NA","34":"NA","35":"NA","36":"NA","37":"NA","38":"NA","39":"<NA>","40":"NA","41":"NA","42":"NA","43":"2015","44":"FALSE","45":"21400883","46":"Dan Crawford","47":"Michael Smith","48":"Tony Brown","49":"1152","50":"1193","51":"2529","52":"NA","53":"NA","54":"18345","55":"30.95000","56":"HOU","57":"home","58":"35.01667","59":"CLE","60":"away","61":"SHOOTING","62":"1","63":"52.0","64":"1.8666667"},{"1":"Q4","2":"01:43.0","3":"Foul: Shooting","4":"JR Smith","5":"James Harden","6":"CC","7":"Smith (CLE) makes contact with the body of Harden (HOU) and the contact affects his movement to the basket.","8":"Cavaliers @ Rockets (Mar 01, 2015)","9":"1","10":"L2M-CLE-HOU-3-1-15.pdf","11":"Mar 01, 2015","12":"Cavaliers","13":"Rockets","14":"2015-03-01","15":"FOUL","16":"SHOOTING","17":"HOU","18":"CLE","19":"21400883","20":"20150301/CLEHOU","21":"105","22":"103","23":"NBATV","24":"NBATV","25":"NA","26":"NA","27":"NA","28":"NA","29":"NA","30":"NA","31":"NA","32":"NA","33":"NA","34":"NA","35":"NA","36":"NA","37":"NA","38":"NA","39":"<NA>","40":"NA","41":"NA","42":"NA","43":"2015","44":"FALSE","45":"21400883","46":"Dan Crawford","47":"Michael Smith","48":"Tony Brown","49":"1152","50":"1193","51":"2529","52":"NA","53":"NA","54":"18345","55":"50.80000","56":"CLE","57":"away","58":"42.35000","59":"HOU","60":"home","61":"SHOOTING","62":"1","63":"43.0","64":"1.7166667"},{"1":"Q4","2":"01:32.0","3":"Foul: Shooting","4":"Trevor Ariza","5":"LeBron James","6":"CC","7":"Ariza (HOU) makes contact with the shoulder of James (CLE) while trying to strip the ball from behind.","8":"Cavaliers @ Rockets (Mar 01, 2015)","9":"1","10":"L2M-CLE-HOU-3-1-15.pdf","11":"Mar 01, 2015","12":"Cavaliers","13":"Rockets","14":"2015-03-01","15":"FOUL","16":"SHOOTING","17":"HOU","18":"CLE","19":"21400883","20":"20150301/CLEHOU","21":"105","22":"103","23":"NBATV","24":"NBATV","25":"NA","26":"NA","27":"NA","28":"NA","29":"NA","30":"NA","31":"NA","32":"NA","33":"NA","34":"NA","35":"NA","36":"NA","37":"NA","38":"NA","39":"<NA>","40":"NA","41":"NA","42":"NA","43":"2015","44":"FALSE","45":"21400883","46":"Dan Crawford","47":"Michael Smith","48":"Tony Brown","49":"1152","50":"1193","51":"2529","52":"NA","53":"NA","54":"18345","55":"42.23333","56":"HOU","57":"home","58":"42.10000","59":"CLE","60":"away","61":"SHOOTING","62":"1","63":"32.0","64":"1.5333333"},{"1":"Q4","2":"01:09.0","3":"Foul: Loose Ball","4":"Terrence Jones","5":"Tristan Thompson","6":"CC","7":"Jones (HOU) makes contact with the arm of Thompson (CLE) causing him to lose control of the rebound.","8":"Cavaliers @ Rockets (Mar 01, 2015)","9":"1","10":"L2M-CLE-HOU-3-1-15.pdf","11":"Mar 01, 2015","12":"Cavaliers","13":"Rockets","14":"2015-03-01","15":"FOUL","16":"LOOSE BALL","17":"HOU","18":"CLE","19":"21400883","20":"20150301/CLEHOU","21":"105","22":"103","23":"NBATV","24":"NBATV","25":"NA","26":"NA","27":"NA","28":"NA","29":"NA","30":"NA","31":"NA","32":"NA","33":"NA","34":"NA","35":"NA","36":"NA","37":"NA","38":"NA","39":"<NA>","40":"NA","41":"NA","42":"NA","43":"2015","44":"FALSE","45":"21400883","46":"Dan Crawford","47":"Michael Smith","48":"Tony Brown","49":"1152","50":"1193","51":"2529","52":"NA","53":"NA","54":"18345","55":"44.01667","56":"HOU","57":"home","58":"37.31667","59":"CLE","60":"away","61":"LOOSE BALL","62":"1","63":"9.0","64":"1.1500000"},{"1":"Q4","2":"00:53.0","3":"Foul: Shooting","4":"Tristan Thompson","5":"Josh Smith","6":"CNC","7":"Smith (HOU) loses the ball as he goes up for the shot in the paint.","8":"Cavaliers @ Rockets (Mar 01, 2015)","9":"1","10":"L2M-CLE-HOU-3-1-15.pdf","11":"Mar 01, 2015","12":"Cavaliers","13":"Rockets","14":"2015-03-01","15":"FOUL","16":"SHOOTING","17":"HOU","18":"CLE","19":"21400883","20":"20150301/CLEHOU","21":"105","22":"103","23":"NBATV","24":"NBATV","25":"NA","26":"NA","27":"NA","28":"NA","29":"NA","30":"NA","31":"NA","32":"NA","33":"NA","34":"NA","35":"NA","36":"NA","37":"NA","38":"NA","39":"<NA>","40":"NA","41":"NA","42":"NA","43":"2015","44":"FALSE","45":"21400883","46":"Dan Crawford","47":"Michael Smith","48":"Tony Brown","49":"1152","50":"1193","51":"2529","52":"NA","53":"NA","54":"18345","55":"37.31667","56":"CLE","57":"away","58":"30.95000","59":"HOU","60":"home","61":"SHOOTING","62":"0","63":"53.0","64":"0.8833333"},{"1":"Q4","2":"00:29.1","3":"Foul: Shooting","4":"Terrence Jones","5":"LeBron James","6":"CNC","7":"Jones (HOU) maintains verticality on drive by James (CLE).","8":"Cavaliers @ Rockets (Mar 01, 2015)","9":"1","10":"L2M-CLE-HOU-3-1-15.pdf","11":"Mar 01, 2015","12":"Cavaliers","13":"Rockets","14":"2015-03-01","15":"FOUL","16":"SHOOTING","17":"HOU","18":"CLE","19":"21400883","20":"20150301/CLEHOU","21":"105","22":"103","23":"NBATV","24":"NBATV","25":"NA","26":"NA","27":"NA","28":"NA","29":"NA","30":"NA","31":"NA","32":"NA","33":"NA","34":"NA","35":"NA","36":"NA","37":"NA","38":"NA","39":"<NA>","40":"NA","41":"NA","42":"NA","43":"2015","44":"FALSE","45":"21400883","46":"Dan Crawford","47":"Michael Smith","48":"Tony Brown","49":"1152","50":"1193","51":"2529","52":"NA","53":"NA","54":"18345","55":"44.01667","56":"HOU","57":"home","58":"42.10000","59":"CLE","60":"away","61":"SHOOTING","62":"0","63":"29.1","64":"0.4850000"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<p>There’s a lot going on here. What we’re going to focus on are the
+following columns:</p>
+<ol style="list-style-type: decimal">
+<li><strong>decision</strong>: This can take on values CC (correct
+call), IC (incorrect call), CNC (correct no call), or INC (incorrect no
+call)</li>
+<li><strong>comments</strong>: When a foul is intentional, it appears to
+be mentioned here with the key phrase “take foul”</li>
+<li><strong>disadvantaged_side</strong>: This indicates whether the home
+team or the away team was disadvantaged by the call (or no call). If we
+know whethre or not the home team is trailing in the series, we can turn
+this into telling us whether or not the trailing team was disadvantaged
+by the call or not.</li>
+</ol>
+<p>Now let’s clean up the data a bit.</p>
+<pre class="r"><code>#limit ourself to playoffs
+l2m_playoffs = filter(l2m, playoff) 
+
+#make the data long
+
+#remove official IDs (we have the names) and remove the 4th ref
+l2m_playoffs = l2m_playoffs %&gt;%
+  select(!c(OFFICIAL_ID_1, OFFICIAL_ID_2, OFFICIAL_ID_3, OFFICIAL_4, OFFICIAL_ID_4))
+
+#make data long so that each referee has its own row
+l2m_playoffs =  l2m_playoffs %&gt;%
+  pivot_longer(
+    cols = starts_with(&quot;OFFICIAL&quot;),
+    names_to = &quot;official_slot&quot;,
+    values_to = &quot;official&quot;
+  )
+
+#if the decision is NA, remove it
+l2m_playoffs = l2m_playoffs[!is.na(l2m_playoffs$decision), ]</code></pre>
+<pre class="r"><code>#limit the data to games that are in our previous dataset
+l2m_data = filter(data, GAME_ID %in% unique(l2m_playoffs$gid))
+
+#data has 3 rows per game, but to merge, we only need one row per game
+l2m_data &lt;- l2m_data %&gt;%
+  distinct(GAME_ID, .keep_all = TRUE)
+
+#merge the dataframe by adding in &quot;uneven&quot;, &quot;round&quot;, and &quot;home_team_trailing&quot; so that we know which games are during uneven series and we know which team is trailing. also so we can filter based on round, just like before
+l2m_playoffs &lt;- l2m_playoffs %&gt;%
+  left_join(l2m_data %&gt;% select(GAME_ID, uneven, round, home_team_trailing), by = join_by(gid == GAME_ID))
+
+#limit ourselves to games that have uneven series records
+l2m_playoffs = filter(l2m_playoffs, uneven)</code></pre>
+<pre class="r"><code>#determine if the trailing team is disadvantaged
+#if the disadvantaged side is home and the trailing team is home, then the trailing team was disadvantaged. etc.
+l2m_playoffs = l2m_playoffs %&gt;% mutate(trailing_team_disadvantaged = case_when(
+  disadvantaged_side == &quot;home&quot; &amp; home_team_trailing ~ TRUE,
+  disadvantaged_side == &quot;away&quot; &amp; !home_team_trailing ~ TRUE,
+  disadvantaged_side == &quot;home&quot; &amp; !home_team_trailing ~ FALSE,
+  disadvantaged_side == &quot;away&quot; &amp; home_team_trailing ~ FALSE,
+  .default  = NA
+  ))
+
+#remove take fouls
+l2m_playoffs = filter(l2m_playoffs, !grepl(&quot;take foul&quot;, comments))</code></pre>
+<pre class="r"><code>#find games where foster officiates
+foster_games = unique(l2m_playoffs[l2m_playoffs$official == &quot;Scott Foster&quot;,]$GAME_ID)
+non_foster_games = setdiff(unique(l2m_playoffs$GAME_ID), foster_games)
+
+#if scott foster is not in the game, keep it. if scott foster is in the game, keep only his row
+l2m_playoffs_filt = l2m_playoffs %&gt;% filter((GAME_ID %in% non_foster_games) | (GAME_ID %in% foster_games &amp; official == &quot;Scott Foster&quot;))</code></pre>
+<p>Now we summarize the data by adding up the number of “decisions” (no
+longer “calls”, because this includes <em>non</em>-calls) that
+disadvantaged the trailing and leading teams. If a ref is truly biased
+against the leading team, their percentage of calls against the leading
+team should be &gt;50%. We’ll modify our data summary function from
+earlier.</p>
+<pre class="r"><code>l2m_data_summary = function(l2m_data, min_decisions){
+  foster_data = filter(l2m_data, official == &quot;Scott Foster&quot;)
+  
+  #total average
+  total_non_foster_decisions = as.integer(sum(l2m_data$total_decisions))
+  total_non_foster_trailing_decisions = as.integer(sum(l2m_data$decisions_against_trailer))
+  total_non_foster_leading_decisions = as.integer(sum(l2m_data$decisions_against_leader))
+  
+  avg_decisions_against_lead_pct = total_non_foster_leading_decisions / total_non_foster_decisions
+  
+  #foster average
+  total_foster_decisions = foster_data$total_decisions
+  total_foster_trailing_decisions = foster_data$decisions_against_trailer
+  total_foster_leading_decisions = foster_data$decisions_against_leader
+  
+  foster_decisions_against_lead_pct = foster_data$prop_against_leading
+  
+  #subset the data with a minimum call filter to get Foster&#39;s rank
+  sub_data = filter(l2m_data, total_decisions &gt; min_decisions)
+  n_eligible = nrow(sub_data)
+  #+1 because if foster has the highest pct, he&#39;ll be rank 0 with this method
+  foster_rank = sum(foster_decisions_against_lead_pct &lt; sub_data$prop_against_leading) + 1
+  
+  #create table rows
+  row1 = c(total_non_foster_leading_decisions,
+           total_non_foster_trailing_decisions,
+           avg_decisions_against_lead_pct,
+           n_eligible)
+  row2 = c(total_foster_leading_decisions,
+           total_foster_trailing_decisions,
+           foster_decisions_against_lead_pct,
+           foster_rank)
+  data_table = as_tibble(rbind(row1, row2))
+  
+  #rename columns
+  colnames(data_table) = c(&quot;Decisions Against Leading Team&quot;,
+                           &quot;Decisions Against Trailing Team&quot;,
+                           &quot;Percent of Decisions Against Leading Team&quot;,
+                           &quot;Rank&quot;)
+  
+  #add column
+  data_table$Type = c(&quot;Non-Foster Games&quot;, &quot;Foster Games&quot;)
+  
+  #rearrange columns
+  data_table = data_table[, c(5, 1, 2, 3, 4)]
+  return(data_table)
+}</code></pre>
+<pre class="r"><code>#all playoff games
+l2m_summary = l2m_playoffs_filt %&gt;%
+  group_by(official) %&gt;%
+  summarize(decisions_against_trailer = sum(trailing_team_disadvantaged, na.rm = TRUE),
+            decisions_against_leader = sum(!trailing_team_disadvantaged, na.rm = TRUE),
+            total_decisions = decisions_against_trailer + decisions_against_leader,
+            prop_against_leading = decisions_against_leader/ total_decisions)
+
+l2m_data_summary(l2m_summary, 100)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Decisions Against Leading Team"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Decisions Against Trailing Team"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Percent of Decisions Against Leading Team"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Games","2":"4191","3":"4319","4":"0.4924794","5":"29"},{"1":"Foster Games","2":"237","3":"239","4":"0.4978992","5":"12"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<pre class="r"><code>#round 1 only
+l2m_summary_no_r1 = l2m_playoffs_filt %&gt;% filter(round == 1) %&gt;%
+  group_by(official) %&gt;%
+  summarize(decisions_against_trailer = sum(trailing_team_disadvantaged, na.rm = TRUE),
+            decisions_against_leader = sum(!trailing_team_disadvantaged, na.rm = TRUE),
+            total_decisions = decisions_against_trailer + decisions_against_leader,
+            prop_against_leading = decisions_against_leader/ total_decisions)
+
+l2m_data_summary(l2m_summary_no_r1, 50)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Decisions Against Leading Team"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Decisions Against Trailing Team"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Percent of Decisions Against Leading Team"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Games","2":"2041","3":"2178","4":"0.4837639","5":"34"},{"1":"Foster Games","2":"109","3":"99","4":"0.5240385","5":"5"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<pre class="r"><code>#round 1 excluded
+l2m_summary_no_r1 = l2m_playoffs_filt %&gt;% filter(round &gt; 1) %&gt;%
+  group_by(official) %&gt;%
+  summarize(decisions_against_trailer = sum(trailing_team_disadvantaged, na.rm = TRUE),
+            decisions_against_leader = sum(!trailing_team_disadvantaged, na.rm = TRUE),
+            total_decisions = decisions_against_trailer + decisions_against_leader,
+            prop_against_leading = decisions_against_leader/ total_decisions)
+
+l2m_data_summary(l2m_summary_no_r1, 50)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Decisions Against Leading Team"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Decisions Against Trailing Team"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Percent of Decisions Against Leading Team"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Games","2":"2150","3":"2141","4":"0.5010487","5":"25"},{"1":"Foster Games","2":"128","3":"140","4":"0.4776119","5":"21"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
 
 
 

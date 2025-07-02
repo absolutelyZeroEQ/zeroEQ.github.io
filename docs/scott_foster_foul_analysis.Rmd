@@ -22,12 +22,14 @@ head(data)
 
 The data has every playoff game from the 2014-2015 season up to and including the 2024-2025 season. Each row represents a game + official combination. There are three officials assigned to each game, so every game has three rows. Some noteworthy columns:
 
-- home_calls: number of calls this official made against (i.e., negatively affecting) the home team
-- team1_wins_prior: number of wins team1 has prior to the game being played
-- team1_wins: number of wins team1 has after the game is played
-- uneven: indicates if the game is eligible for an "extension", i.e., the series is not tied.
-- extended: indicates if the game resulted in an "extension", i.e., the team that was trailing in the series won.
-- trailing_calls: the number of calls this official made against (i.e., negatively affecting) the team trailing in the series. if the series was tied going into the game, this should be 0
+- **home_calls**: number of calls this official made against (i.e., negatively affecting) the home team
+- **team1_wins_prior**: number of wins team1 has prior to the game being played
+- **team1_wins**: number of wins team1 has after the game is played
+- **uneven**: indicates if the game is eligible for an "extension", i.e., the series is not tied.
+- **extended**: indicates if the game resulted in an "extension", i.e., the team that was trailing in the series won.
+- **trailing_calls**: the number of calls this official made against (i.e., negatively affecting) the team trailing in the series. if the series was tied going into the game, this should be 0
+
+An important note: this data set excludes transition take fouls, violations (e.g. kicked ball), and techs. It does **not** exclude intentional fouls. We'll address this later.
 
 
 Next we'll summarize the data for each individual referee. We want:
@@ -75,7 +77,8 @@ data_summary = function(ref_data, min_calls){
   #subset the data with a minimum call filter to get Foster's rank
   sub_data = filter(ref_data, total_uneven_calls > min_calls)
   n_eligible = nrow(sub_data)
-  foster_rank = sum(foster_calls_against_lead_pct < sub_data$calls_against_lead_pct)
+  #+1 because if foster has the highest pct, he'll be rank 0 with this method
+  foster_rank = sum(foster_calls_against_lead_pct < sub_data$calls_against_lead_pct) + 1
   
   #create table rows
   row1 = c(total_non_foster_leading_calls,
@@ -130,23 +133,22 @@ ref_data_no_r1 = data %>% filter(round > 1) %>%
 ```
 
 ```{r}
-data_summary(ref_data_only_r1, 100)
+data_summary(ref_data_only_r1, 50)
 ```
 
 Foster's call % against the leading team being <50% indicates that there is a slight advantage to the leading team, not the trailing team.
 
 ```{r}
-data_summary(ref_data_no_r1, 100)
+data_summary(ref_data_no_r1, 50)
 ```
 
-Excluding round 1, Foster is at 51.5%, a bit higher than the non-Foster average. Let's give this some context and scope. 
+Excluding round 1, Foster is at 51.5%, a bit higher than the non-Foster average.
 
-First, Foster is only ranked 9th out of 29, meaning there are 8 refs who have a higher percentage of calls against the leading team (and thus, a bigger advantage to trailing teams).
+Foster is ranked 11th out of 36, meaning there are 10 refs who have a higher percentage of calls against the leading team (and thus, a bigger advantage to trailing teams).
 
-Second, Foster officiated 56 games in this span. The averages here come out to 8 calls per game against the trailing team and 8.5 calls per game against the leading team. For someone with the nickname "The Extender", you would think that he would give a bigger advantage than 1 extra call every 2 games, on average.
+Foster officiated 56 games in this span. The averages here come out to 8 calls per game against the trailing team and 8.5 calls per game against the leading team. 
 
-
-But suppose that the NBA truly does have their refs try to tilt certain games to extend series. Since there are three officials in each game, Scott Foster may not *have* to be the one calling the fouls. It could be the case that the other officials in Foster's games are making uneven calls as well. Hence, we may want to look at the TOTAL foul calls by all three officials in games including vs excluding Foster.
+Suppose that the NBA truly does have their refs try to tilt certain games to extend series. Since there are three officials in each game, Scott Foster may not *have* to be the one calling the fouls. It could be the case that the other officials in Foster's games are making uneven calls as well. Hence, we may want to look at the TOTAL foul calls by all three officials in games including vs excluding Foster.
 
 First, let's identify games that Foster is in by adding a column called "foster_game" that takes on the value of TRUE when Foster is in that game, and FALSE otherwise.
 
@@ -216,3 +218,201 @@ data_summary_totals(data_combined_no_r1)
 ```
 
 Same conclusion if we limit ourselves to rounds beyond the first.
+
+But maybe Foster only shows his bias in high leverage moments. Maybe him and the NBA are smart enough to avoid being detected in the analysis above by employing the following strategy:
+
+1. Call the game like normal for most of the game, showing no obvious bias
+2. If the game is close in the last few minutes, try to tilt the game towards the trailing team.
+
+One problem with trying to do this with our dataset is that there are a lot of ways to chop up the data and a lot of different "high leverage" definitions. 
+
+The other (more important, imo) problem is that we don't know which fouls are intentional fouls. In many late-game scenarios, one team may start intentionally fouling to stop the clock. Over the long run, I would imagine that this would average out across refs. However, if we focus on non-round 1 playoff games and only look at close games late in the 4th, we're probably cutting our sample size by an order of magnitude, where a few intentional fouls could really swing things.
+
+Fortunately, we have the last 2 minutes report. This solves quite a few things for us:
+
+1. We have a consistent criteria for high leverage (games that are within 3 points at any point in the last 2 minutes) that was decided for us (so we can't just keep slightly changing our definition of "high leverage" until we get a desirable result)
+2. We can filter out take fouls, since they are usually mentioned in the description of the foul here.
+3. We get more than just foul calls, like out of bounds calls.
+4. We also get *non-calls*. This is important for us because it increases our sample size and gives us a fuller picture.
+
+The dataset tells us which refs were involved in each game, but it does *not* tell us which referee made the call. We could probably merge with our other dataset to determine who made which calls, but we obviously can't tell which ref is at fault for *non* calls.
+
+First, let's load in the data.
+
+L2M Analysis
+
+```{r}
+library(data.table)
+#need to use fread from data.table here, otherwise things get messed up
+l2m = fread("L2M_data2.csv")
+head(l2m)
+```
+
+There's a lot going on here. What we're going to focus on are the following columns:
+
+1. **decision**: This can take on values CC (correct call), IC (incorrect call), CNC (correct no call), or INC (incorrect no call)
+2. **comments**: When a foul is intentional, it appears to be mentioned here with the key phrase "take foul"
+3. **disadvantaged_side**: This indicates whether the home team or the away team was disadvantaged by the call (or no call). If we know whethre or not the home team is trailing in the series, we can turn this into telling us whether or not the trailing team was disadvantaged by the call or not.
+
+Now let's clean up the data a bit.
+
+```{r}
+#limit ourself to playoffs
+l2m_playoffs = filter(l2m, playoff) 
+
+#make the data long
+
+#remove official IDs (we have the names) and remove the 4th ref
+l2m_playoffs = l2m_playoffs %>%
+  select(!c(OFFICIAL_ID_1, OFFICIAL_ID_2, OFFICIAL_ID_3, OFFICIAL_4, OFFICIAL_ID_4))
+
+#make data long so that each referee has its own row
+l2m_playoffs =  l2m_playoffs %>%
+  pivot_longer(
+    cols = starts_with("OFFICIAL"),
+    names_to = "official_slot",
+    values_to = "official"
+  )
+
+#if the decision is NA, remove it
+l2m_playoffs = l2m_playoffs[!is.na(l2m_playoffs$decision), ]
+```
+
+```{r}
+#limit the data to games that are in our previous dataset
+l2m_data = filter(data, GAME_ID %in% unique(l2m_playoffs$gid))
+
+#data has 3 rows per game, but to merge, we only need one row per game
+l2m_data <- l2m_data %>%
+  distinct(GAME_ID, .keep_all = TRUE)
+
+#merge the dataframe by adding in "uneven", "round", and "home_team_trailing" so that we know which games are during uneven series and we know which team is trailing. also so we can filter based on round, just like before
+l2m_playoffs <- l2m_playoffs %>%
+  left_join(l2m_data %>% select(GAME_ID, uneven, round, home_team_trailing), by = join_by(gid == GAME_ID))
+
+#limit ourselves to games that have uneven series records
+l2m_playoffs = filter(l2m_playoffs, uneven)
+```
+
+
+```{r}
+#determine if the trailing team is disadvantaged
+#if the disadvantaged side is home and the trailing team is home, then the trailing team was disadvantaged. etc.
+l2m_playoffs = l2m_playoffs %>% mutate(trailing_team_disadvantaged = case_when(
+  disadvantaged_side == "home" & home_team_trailing ~ TRUE,
+  disadvantaged_side == "away" & !home_team_trailing ~ TRUE,
+  disadvantaged_side == "home" & !home_team_trailing ~ FALSE,
+  disadvantaged_side == "away" & home_team_trailing ~ FALSE,
+  .default  = NA
+  ))
+
+#remove take fouls
+l2m_playoffs = filter(l2m_playoffs, !grepl("take foul", comments))
+```
+
+```{r}
+#find games where foster officiates
+foster_games = unique(l2m_playoffs[l2m_playoffs$official == "Scott Foster",]$GAME_ID)
+non_foster_games = setdiff(unique(l2m_playoffs$GAME_ID), foster_games)
+
+#if scott foster is not in the game, keep it. if scott foster is in the game, keep only his row
+l2m_playoffs_filt = l2m_playoffs %>% filter((GAME_ID %in% non_foster_games) | (GAME_ID %in% foster_games & official == "Scott Foster"))
+```
+
+
+Now we summarize the data by adding up the number of "decisions" (no longer "calls", because this includes *non*-calls) that disadvantaged the trailing and leading teams. If a ref is truly biased against the leading team, their percentage of calls against the leading team should be >50%. We'll modify our data summary function from earlier.
+
+```{r}
+l2m_data_summary = function(l2m_data, min_decisions){
+  foster_data = filter(l2m_data, official == "Scott Foster")
+  
+  #total average
+  total_non_foster_decisions = as.integer(sum(l2m_data$total_decisions))
+  total_non_foster_trailing_decisions = as.integer(sum(l2m_data$decisions_against_trailer))
+  total_non_foster_leading_decisions = as.integer(sum(l2m_data$decisions_against_leader))
+  
+  avg_decisions_against_lead_pct = total_non_foster_leading_decisions / total_non_foster_decisions
+  
+  #foster average
+  total_foster_decisions = foster_data$total_decisions
+  total_foster_trailing_decisions = foster_data$decisions_against_trailer
+  total_foster_leading_decisions = foster_data$decisions_against_leader
+  
+  foster_decisions_against_lead_pct = foster_data$prop_against_leading
+  
+  #subset the data with a minimum call filter to get Foster's rank
+  sub_data = filter(l2m_data, total_decisions > min_decisions)
+  n_eligible = nrow(sub_data)
+  #+1 because if foster has the highest pct, he'll be rank 0 with this method
+  foster_rank = sum(foster_decisions_against_lead_pct < sub_data$prop_against_leading) + 1
+  
+  #create table rows
+  row1 = c(total_non_foster_leading_decisions,
+           total_non_foster_trailing_decisions,
+           avg_decisions_against_lead_pct,
+           n_eligible)
+  row2 = c(total_foster_leading_decisions,
+           total_foster_trailing_decisions,
+           foster_decisions_against_lead_pct,
+           foster_rank)
+  data_table = as_tibble(rbind(row1, row2))
+  
+  #rename columns
+  colnames(data_table) = c("Decisions Against Leading Team",
+                           "Decisions Against Trailing Team",
+                           "Percent of Decisions Against Leading Team",
+                           "Rank")
+  
+  #add column
+  data_table$Type = c("Non-Foster Games", "Foster Games")
+  
+  #rearrange columns
+  data_table = data_table[, c(5, 1, 2, 3, 4)]
+  return(data_table)
+}
+```
+
+
+```{r}
+#all playoff games
+l2m_summary = l2m_playoffs_filt %>%
+  group_by(official) %>%
+  summarize(decisions_against_trailer = sum(trailing_team_disadvantaged, na.rm = TRUE),
+            decisions_against_leader = sum(!trailing_team_disadvantaged, na.rm = TRUE),
+            total_decisions = decisions_against_trailer + decisions_against_leader,
+            prop_against_leading = decisions_against_leader/ total_decisions)
+
+l2m_data_summary(l2m_summary, 100)
+```
+
+```{r}
+#round 1 only
+l2m_summary_no_r1 = l2m_playoffs_filt %>% filter(round == 1) %>%
+  group_by(official) %>%
+  summarize(decisions_against_trailer = sum(trailing_team_disadvantaged, na.rm = TRUE),
+            decisions_against_leader = sum(!trailing_team_disadvantaged, na.rm = TRUE),
+            total_decisions = decisions_against_trailer + decisions_against_leader,
+            prop_against_leading = decisions_against_leader/ total_decisions)
+
+l2m_data_summary(l2m_summary_no_r1, 50)
+```
+
+
+
+
+```{r}
+#round 1 excluded
+l2m_summary_no_r1 = l2m_playoffs_filt %>% filter(round > 1) %>%
+  group_by(official) %>%
+  summarize(decisions_against_trailer = sum(trailing_team_disadvantaged, na.rm = TRUE),
+            decisions_against_leader = sum(!trailing_team_disadvantaged, na.rm = TRUE),
+            total_decisions = decisions_against_trailer + decisions_against_leader,
+            prop_against_leading = decisions_against_leader/ total_decisions)
+
+l2m_data_summary(l2m_summary_no_r1, 50)
+
+```
+
+
+
+

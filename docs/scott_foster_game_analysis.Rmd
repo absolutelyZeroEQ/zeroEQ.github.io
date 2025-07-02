@@ -22,11 +22,11 @@ head(data)
 
 The data has every playoff game from the 2007-2008 season up to and including the 2024-2025 season. Each row represents a game + official combination. There are three officials assigned to each game, so every game has three rows. Some noteworthy columns:
 
-- SCOREMARGIN: The final score margin for the home team. +7 means the home team won by 7. -7 means the home team lost by 7.
-- team1_wins_prior: number of wins team1 has prior to the game being played
-- team1_wins: number of wins team1 has after the game is played
-- uneven: indicates if the game is eligible for an "extension", i.e., the series is not tied.
-- extended: indicates if the game resulted in an "extension", i.e., the team that was trailing in the series won.
+- **SCOREMARGIN**: The final score margin for the home team. +7 means the home team won by 7. -7 means the home team lost by 7.
+- **team1_wins_prior**: number of wins team1 has prior to the game being played
+- **team1_wins**: number of wins team1 has after the game is played
+- **uneven**: indicates if the game is eligible for an "extension", i.e., the series is not tied.
+- **extended**: indicates if the game resulted in an "extension", i.e., the team that was trailing in the series won.
 
 We want to start by slightly filtering the data. We're going to be looking at the winning percentage of trailing teams while Foster is officiating, compared to other referees. Since every game has 3 refs, there's some overlap in the data. If we assume Foster *does* tilt games in favor of the trailing teams, then we would expect that a truly neutral ref who shares a lot of games with Foster will have slightly biased numbers. To account for this, we make sure that for non-Foster refs, we only look at the games where Foster did not share the floor with them.
 
@@ -84,7 +84,8 @@ data_summary = function(ref_data, min_games){
   #subset the data with a minimum game filter to get foster's rank
   sub_data = filter(ref_data, uneven_games > min_games)
   n_eligible = nrow(sub_data)
-  foster_rank = sum(foster_trailing_team_win_pct < sub_data$trailing_team_win_pct)
+  #+1 because if foster has the highest pct, he'll be rank 0 with this method
+  foster_rank = sum(foster_trailing_team_win_pct < sub_data$trailing_team_win_pct) + 1
   
   #create table rows
   row1 = c(trailing_wins,trailing_losses,non_foster_trailing_team_win_pct,n_eligible)
@@ -110,7 +111,7 @@ data_summary(ref_data_overall, 20)
 
 We can see here that the trailing team typically has a win rate of 44%. When Foster is officiating, that number is about 47%. However, since Foster is an experienced ref, the NBA puts him in more important games, which likely means fewer round 1 games. Fewer round 1 games means that teams are more likely to be evenly matched. More evenly matched means that trailing teams should have higher winning percentages in later rounds.
 
-First let's check if this hypothesis holds up. We'll grab the 10 most experienced referees in this time span and the 25 least experienced, and look at what percentage of games they officiate are in the first round:
+First let's check how often experienced refs officiate round 1 games. We'll grab the 10 most experienced referees in this time span and the 25 least experienced, and look at what percentage of games they officiate are in the first round:
 
 ```{r}
 top_10_refs = top_n(ref_data_overall, 10, total_games)
@@ -127,7 +128,7 @@ The first part of the claim is true: 80+% of the games officiated by the 25 leas
 
 
 ```{r}
-ref_data_r1_only = data_filt %>% filter(round == 1) %>%
+ref_data_r1_only = data_filt %>% filter(round == 1) %>% 
   group_by(official) %>%
   summarize(total_games = n(),
             uneven_games = sum(uneven),
@@ -142,7 +143,7 @@ data_summary(ref_data_r1_only, 10)
 We see the winning percentage of trailing teams drop in the first round, as expected. 
 
 ```{r}
-ref_data_no_r1 = data_filt %>% filter(round > 1) %>%
+ref_data_no_r1 = data_filt %>% filter(round > 1) %>% 
   group_by(official) %>%
   summarize(total_games = n(),
             uneven_games = sum(uneven),
@@ -154,10 +155,57 @@ ref_data_no_r1 = data_filt %>% filter(round > 1) %>%
 data_summary(ref_data_no_r1, 10)
 ```
 
-And the winning percentage in later rounds is higher, as expected. Here we note that the winning percentage of trailing teams is higher when Foster is officiating. However, let's try to give this some scope and context.
+And the winning percentage in later rounds is higher, as expected. Here we note that the winning percentage of trailing teams is higher when Foster is officiating. 
 
 Foster is ranked 10th out of 33 qualifying refs in terms of trailing team winning percentage. That is, trailing teams have a higher winning percentage with 9 other refs than they do with Scott Foster.
 
-Also, look at the sample sizes here: trailing teams are 45-43 with Foster. If we take 48% to be the "true" winning percentage we would expect, then after 88 games, the expected record would be 42-46. In other words, trailing teams only have 3 more wins than expected after nearly 100 games officiated by Foster. If he's truly the "Extender", then he's not very good at extending.
+How meaningful is this? Trailing teams are 45-43 with Foster. If we take 48% to be the "true" winning percentage we would expect, then after 88 games, the expected record would be 42-46. In other words, trailing teams only have 3 more wins than expected after nearly 100 games officiated by Foster.
+
+What if we remove blowouts? Foster probably can't be the reason a trailing team wins, if that team wins by 30 points. Let's remove every game with a final score difference at 20 or above.
+
+```{r}
+blowout_criteria = 20
+```
 
 
+```{r}
+ref_data_overall = data_filt %>% filter(abs(as.integer(SCOREMARGIN)) < blowout_criteria) %>%
+  group_by(official) %>%
+  summarize(total_games = n(),
+            uneven_games = sum(uneven),
+            extensions = sum(extended),
+            trailing_team_win_pct = extensions / uneven_games,
+            r1_games = sum(round == 1),
+            r1_pct = r1_games/total_games)
+
+data_summary(ref_data_overall, 20)
+```
+
+```{r}
+ref_data_r1_only = data_filt %>% filter(round == 1) %>% filter(abs(as.integer(SCOREMARGIN)) < blowout_criteria) %>%
+  group_by(official) %>%
+  summarize(total_games = n(),
+            uneven_games = sum(uneven),
+            extensions = sum(extended),
+            trailing_team_win_pct = extensions / uneven_games,
+            r1_games = sum(round == 1),
+            r1_pct = r1_games/total_games)
+
+data_summary(ref_data_r1_only, 10)
+```
+
+```{r}
+ref_data_no_r1 = data_filt %>% filter(round > 1) %>% filter(abs(as.integer(SCOREMARGIN)) < blowout_criteria) %>%
+  group_by(official) %>%
+  summarize(total_games = n(),
+            uneven_games = sum(uneven),
+            extensions = sum(extended),
+            trailing_team_win_pct = extensions / uneven_games,
+            r1_games = sum(round == 1),
+            r1_pct = r1_games/total_games)
+
+data_summary(ref_data_no_r1, 10)
+```
+
+
+The values shift around a bit, but the conclusions are effectively the same as before.

@@ -1643,15 +1643,17 @@ including the 2024-2025 season. Each row represents a game + official
 combination. There are three officials assigned to each game, so every
 game has three rows. Some noteworthy columns:</p>
 <ul>
-<li>SCOREMARGIN: The final score margin for the home team. +7 means the
-home team won by 7. -7 means the home team lost by 7.</li>
-<li>team1_wins_prior: number of wins team1 has prior to the game being
-played</li>
-<li>team1_wins: number of wins team1 has after the game is played</li>
-<li>uneven: indicates if the game is eligible for an “extension”, i.e.,
-the series is not tied.</li>
-<li>extended: indicates if the game resulted in an “extension”, i.e.,
-the team that was trailing in the series won.</li>
+<li><strong>SCOREMARGIN</strong>: The final score margin for the home
+team. +7 means the home team won by 7. -7 means the home team lost by
+7.</li>
+<li><strong>team1_wins_prior</strong>: number of wins team1 has prior to
+the game being played</li>
+<li><strong>team1_wins</strong>: number of wins team1 has after the game
+is played</li>
+<li><strong>uneven</strong>: indicates if the game is eligible for an
+“extension”, i.e., the series is not tied.</li>
+<li><strong>extended</strong>: indicates if the game resulted in an
+“extension”, i.e., the team that was trailing in the series won.</li>
 </ul>
 <p>We want to start by slightly filtering the data. We’re going to be
 looking at the winning percentage of trailing teams while Foster is
@@ -1710,7 +1712,8 @@ officiated</li>
   #subset the data with a minimum game filter to get foster&#39;s rank
   sub_data = filter(ref_data, uneven_games &gt; min_games)
   n_eligible = nrow(sub_data)
-  foster_rank = sum(foster_trailing_team_win_pct &lt; sub_data$trailing_team_win_pct)
+  #+1 because if foster has the highest pct, he&#39;ll be rank 0 with this method
+  foster_rank = sum(foster_trailing_team_win_pct &lt; sub_data$trailing_team_win_pct) + 1
   
   #create table rows
   row1 = c(trailing_wins,trailing_losses,non_foster_trailing_team_win_pct,n_eligible)
@@ -1731,7 +1734,7 @@ officiated</li>
 <pre class="r"><code>data_summary(ref_data_overall, 20)</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Trailing Team Wins"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Losses"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Winning %"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Games","2":"1143","3":"1446","4":"0.4414832","5":"38"},{"1":"Foster Games","2":"72","3":"81","4":"0.4705882","5":"12"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Trailing Team Wins"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Losses"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Winning %"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Games","2":"1143","3":"1446","4":"0.4414832","5":"38"},{"1":"Foster Games","2":"72","3":"81","4":"0.4705882","5":"13"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <p>We can see here that the trailing team typically has a win rate of
@@ -1741,10 +1744,10 @@ games, which likely means fewer round 1 games. Fewer round 1 games means
 that teams are more likely to be evenly matched. More evenly matched
 means that trailing teams should have higher winning percentages in
 later rounds.</p>
-<p>First let’s check if this hypothesis holds up. We’ll grab the 10 most
-experienced referees in this time span and the 25 least experienced, and
-look at what percentage of games they officiate are in the first
-round:</p>
+<p>First let’s check how often experienced refs officiate round 1 games.
+We’ll grab the 10 most experienced referees in this time span and the 25
+least experienced, and look at what percentage of games they officiate
+are in the first round:</p>
 <pre class="r"><code>top_10_refs = top_n(ref_data_overall, 10, total_games)
 bottom_25_refs = top_n(ref_data_overall, -25, total_games)
 
@@ -1759,7 +1762,7 @@ top_10_refs_r1_pct</code></pre>
 the 25 least experienced refs were in round 1. Less than half of the
 games officiated by the 10 most experienced refs were in round 1. Now
 let’s subset the data and return similar tables as before:</p>
-<pre class="r"><code>ref_data_r1_only = data_filt %&gt;% filter(round == 1) %&gt;%
+<pre class="r"><code>ref_data_r1_only = data_filt %&gt;% filter(round == 1) %&gt;% 
   group_by(official) %&gt;%
   summarize(total_games = n(),
             uneven_games = sum(uneven),
@@ -1771,12 +1774,12 @@ let’s subset the data and return similar tables as before:</p>
 data_summary(ref_data_r1_only, 10)</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Trailing Team Wins"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Losses"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Winning %"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Games","2":"582","3":"836","4":"0.4104372","5":"44"},{"1":"Foster Games","2":"27","3":"38","4":"0.4153846","5":"26"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Trailing Team Wins"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Losses"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Winning %"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Games","2":"582","3":"836","4":"0.4104372","5":"44"},{"1":"Foster Games","2":"27","3":"38","4":"0.4153846","5":"27"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <p>We see the winning percentage of trailing teams drop in the first
 round, as expected.</p>
-<pre class="r"><code>ref_data_no_r1 = data_filt %&gt;% filter(round &gt; 1) %&gt;%
+<pre class="r"><code>ref_data_no_r1 = data_filt %&gt;% filter(round &gt; 1) %&gt;% 
   group_by(official) %&gt;%
   summarize(total_games = n(),
             uneven_games = sum(uneven),
@@ -1788,22 +1791,71 @@ round, as expected.</p>
 data_summary(ref_data_no_r1, 10)</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Trailing Team Wins"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Losses"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Winning %"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Games","2":"561","3":"610","4":"0.4790777","5":"33"},{"1":"Foster Games","2":"45","3":"43","4":"0.5113636","5":"10"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Trailing Team Wins"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Losses"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Winning %"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Games","2":"561","3":"610","4":"0.4790777","5":"33"},{"1":"Foster Games","2":"45","3":"43","4":"0.5113636","5":"11"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <p>And the winning percentage in later rounds is higher, as expected.
 Here we note that the winning percentage of trailing teams is higher
-when Foster is officiating. However, let’s try to give this some scope
-and context.</p>
+when Foster is officiating.</p>
 <p>Foster is ranked 10th out of 33 qualifying refs in terms of trailing
 team winning percentage. That is, trailing teams have a higher winning
 percentage with 9 other refs than they do with Scott Foster.</p>
-<p>Also, look at the sample sizes here: trailing teams are 45-43 with
-Foster. If we take 48% to be the “true” winning percentage we would
-expect, then after 88 games, the expected record would be 42-46. In
-other words, trailing teams only have 3 more wins than expected after
-nearly 100 games officiated by Foster. If he’s truly the “Extender”,
-then he’s not very good at extending.</p>
+<p>How meaningful is this? Trailing teams are 45-43 with Foster. If we
+take 48% to be the “true” winning percentage we would expect, then after
+88 games, the expected record would be 42-46. In other words, trailing
+teams only have 3 more wins than expected after nearly 100 games
+officiated by Foster.</p>
+<p>What if we remove blowouts? Foster probably can’t be the reason a
+trailing team wins, if that team wins by 30 points. Let’s remove every
+game with a final score difference at 20 or above.</p>
+<pre class="r"><code>blowout_criteria = 20</code></pre>
+<pre class="r"><code>ref_data_overall = data_filt %&gt;% filter(abs(as.integer(SCOREMARGIN)) &lt; blowout_criteria) %&gt;%
+  group_by(official) %&gt;%
+  summarize(total_games = n(),
+            uneven_games = sum(uneven),
+            extensions = sum(extended),
+            trailing_team_win_pct = extensions / uneven_games,
+            r1_games = sum(round == 1),
+            r1_pct = r1_games/total_games)
+
+data_summary(ref_data_overall, 20)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Trailing Team Wins"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Losses"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Winning %"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Games","2":"953","3":"1171","4":"0.4486817","5":"35"},{"1":"Foster Games","2":"62","3":"67","4":"0.4806202","5":"14"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<pre class="r"><code>ref_data_r1_only = data_filt %&gt;% filter(round == 1) %&gt;% filter(abs(as.integer(SCOREMARGIN)) &lt; blowout_criteria) %&gt;%
+  group_by(official) %&gt;%
+  summarize(total_games = n(),
+            uneven_games = sum(uneven),
+            extensions = sum(extended),
+            trailing_team_win_pct = extensions / uneven_games,
+            r1_games = sum(round == 1),
+            r1_pct = r1_games/total_games)
+
+data_summary(ref_data_r1_only, 10)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Trailing Team Wins"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Losses"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Winning %"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Games","2":"513","3":"682","4":"0.4292887","5":"38"},{"1":"Foster Games","2":"24","3":"31","4":"0.4363636","5":"21"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<pre class="r"><code>ref_data_no_r1 = data_filt %&gt;% filter(round &gt; 1) %&gt;% filter(abs(as.integer(SCOREMARGIN)) &lt; blowout_criteria) %&gt;%
+  group_by(official) %&gt;%
+  summarize(total_games = n(),
+            uneven_games = sum(uneven),
+            extensions = sum(extended),
+            trailing_team_win_pct = extensions / uneven_games,
+            r1_games = sum(round == 1),
+            r1_pct = r1_games/total_games)
+
+data_summary(ref_data_no_r1, 10)</code></pre>
+<div data-pagedtable="false">
+<script data-pagedtable-source type="application/json">
+{"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Trailing Team Wins"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Losses"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Trailing Team Winning %"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Games","2":"440","3":"489","4":"0.4736276","5":"32"},{"1":"Foster Games","2":"38","3":"36","4":"0.5135135","5":"9"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+  </script>
+</div>
+<p>The values shift around a bit, but the conclusions are effectively
+the same as before.</p>
 
 
 
