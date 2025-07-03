@@ -2034,14 +2034,14 @@ l2m_data_summary(l2m_summary, 100)</code></pre>
   </script>
 </div>
 <pre class="r"><code>#round 1 only
-l2m_summary_no_r1 = l2m_playoffs_filt %&gt;% filter(round == 1) %&gt;%
+l2m_summary_r1_only = l2m_playoffs_filt %&gt;% filter(round == 1) %&gt;%
   group_by(official) %&gt;%
   summarize(decisions_against_trailer = sum(trailing_team_disadvantaged, na.rm = TRUE),
             decisions_against_leader = sum(!trailing_team_disadvantaged, na.rm = TRUE),
             total_decisions = decisions_against_trailer + decisions_against_leader,
             prop_against_leading = decisions_against_leader/ total_decisions)
 
-l2m_data_summary(l2m_summary_no_r1, 50)</code></pre>
+l2m_data_summary(l2m_summary_r1_only, 50)</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
 {"columns":[{"label":["Type"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Decisions Against Leading Team"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["Decisions Against Trailing Team"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["Percent of Decisions Against Leading Team"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["Rank"],"name":[5],"type":["dbl"],"align":["right"]}],"data":[{"1":"Non-Foster Games","2":"2041","3":"2178","4":"0.4837639","5":"34"},{"1":"Foster Games","2":"109","3":"99","4":"0.5240385","5":"5"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}

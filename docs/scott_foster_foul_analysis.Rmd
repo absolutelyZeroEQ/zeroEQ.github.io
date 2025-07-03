@@ -387,14 +387,14 @@ l2m_data_summary(l2m_summary, 100)
 
 ```{r}
 #round 1 only
-l2m_summary_no_r1 = l2m_playoffs_filt %>% filter(round == 1) %>%
+l2m_summary_r1_only = l2m_playoffs_filt %>% filter(round == 1) %>%
   group_by(official) %>%
   summarize(decisions_against_trailer = sum(trailing_team_disadvantaged, na.rm = TRUE),
             decisions_against_leader = sum(!trailing_team_disadvantaged, na.rm = TRUE),
             total_decisions = decisions_against_trailer + decisions_against_leader,
             prop_against_leading = decisions_against_leader/ total_decisions)
 
-l2m_data_summary(l2m_summary_no_r1, 50)
+l2m_data_summary(l2m_summary_r1_only, 50)
 ```
 
 
